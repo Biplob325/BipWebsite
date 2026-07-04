@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grammar Analyzer AI</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 10px; background: #f9f9f9; }
+    h1 { text-align: center; }
+    textarea { width: 100%; height: 100px; font-size: 16px; padding: 10px; }
+    button { width: 100%; margin: 8px 0; padding: 14px; font-size: 16px; border-radius: 6px; border: none; background: #4CAF50; color: white; }
+    #output { margin-top: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 10px; font-size: 14px; }
+    th { background-color: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <h1>Grammar Analyzer</h1>
+  
+  <textarea id="inputSentence" placeholder="Type or dictate a sentence..."></textarea>
+  <button onclick="analyzeSentence()">Analyze Grammar</button>
+  <button onclick="startVoice()">🎤 Voice Input</button>
+  <button onclick="downloadDoc()">⬇️ Download Result</button>
+  
+  <div id="output"></div>
+  
+  <script>
+    async function analyzeSentence() {
+      const sentence = document.getElementById("inputSentence").value;
+      
+      const response = await fetch("https://api.languagetool.org/v2/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ text: sentence, language: "en-US" })
+      });
+      
+      const data = await response.json();
+      
+      let html = "<table><tr><th>Issue</th><th>Explanation</th><th>Suggestion</th></tr>";
+      data.matches.forEach(match => {
+        html += `<tr>
+          <td>${match.rule.issueType}</td>
+          <td>${match.message}</td>
+          <td>${match.replacements.map(r => r.value).join(", ")}</td>
+        </tr>`;
+      });
+      html += "</table>";
+      
+      document.getElementById("output").innerHTML = html || "<p>No issues found. Sentence looks good!</p>";
+    }
+    
+    function startVoice() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Voice input not supported in this browser.");
+        return;
+      }
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.onresult = (event) => {
+        document.getElementById("inputSentence").value = event.results[0][0].transcript;
+      };
+      recognition.start();
+    }
+    
+    function downloadDoc() {
+      const text = document.getElementById("output").innerText;
+      if (!text.trim()) { alert("No analysis to download."); return; }
+      const blob = new Blob([text], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "grammar_analysis.txt";
+      link.click();
+    }
+  </script>
+</body>
+</html>
